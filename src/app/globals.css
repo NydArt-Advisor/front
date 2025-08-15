@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light mode colors */
+  --color-primary-dark-blue: #30333d;
+  --color-primary-slate: #4d5364;
+  --color-primary-coral: #DA6743;
+  --color-primary-salmon: #F68A6E;
+  --color-primary-sand: #CEB683;
+
+  --color-background: #ffffff;
+  --color-text: #000000;
+}
+
+.dark {
+  /* Dark mode colors */
+  --color-background: #30333d;
+  --color-text: #ffffff;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text transition-colors duration-200;
+    font-family: var(--font-fredoka);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-yeseva);
+  }
+}
+
+/* Custom utility classes */
+.font-primary {
+  font-family: var(--font-fredoka);
+}
+
+.font-secondary {
+  font-family: var(--font-yeseva);
+}
+
+@layer components {
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
