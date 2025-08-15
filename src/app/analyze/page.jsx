@@ -3,13 +3,16 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { FaPalette, FaPlus } from 'react-icons/fa';
 
 // Dynamically import components with ssr: false to prevent hydration mismatch
 const ImageUpload = dynamic(() => import('@/components/ui/ImageUpload'), { ssr: false });
 const AnalysisResults = dynamic(() => import('@/components/ui/AnalysisResults'), { ssr: false });
 const AnalysisSkeleton = dynamic(() => import('@/components/ui/AnalysisSkeleton'), { ssr: false });
 
-const API_URL = 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
 
 // Image compression function
 const compressImage = async (file) => {
@@ -54,6 +57,9 @@ const compressImage = async (file) => {
 };
 
 export default function AnalyzePage() {
+    const { user, isAuthenticated } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [mounted, setMounted] = useState(false);
     const [selectedFile, setSelectedFile] = useState(null);
     const [analysisType, setAnalysisType] = useState('general');
@@ -68,10 +74,49 @@ export default function AnalyzePage() {
         return [];
     });
 
+    // Add state for database analyses
+    const [dbAnalyses, setDbAnalyses] = useState([]);
+    const [dbAnalysesLoading, setDbAnalysesLoading] = useState(false);
+    const [selectedAnalysisId, setSelectedAnalysisId] = useState(null);
+
+    // Check for pre-loaded artwork from URL params
+    const artworkId = searchParams.get('artworkId');
+    const imageUrl = searchParams.get('imageUrl');
+
+    // Fetch analyses from database
+    useEffect(() => {
+        if (isAuthenticated && user?.id) {
+            setDbAnalysesLoading(true);
+            fetch(`${process.env.NEXT_PUBLIC_DB_SERVICE_URL}/api/analyses/user?limit=10`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Failed to fetch analyses');
+                    return res.json();
+                })
+                .then(data => {
+                    setDbAnalyses(data.analyses || []);
+                })
+                .catch(err => {
+                    console.error('Error fetching database analyses:', err);
+                })
+                .finally(() => setDbAnalysesLoading(false));
+        }
+    }, [isAuthenticated, user?.id]);
+
     // Handle mounting to prevent hydration mismatch
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Check authentication
+    useEffect(() => {
+        if (mounted && !isAuthenticated) {
+            router.push('/auth/login');
+        }
+    }, [mounted, isAuthenticated, router]);
 
     // Memoize the API URL check to prevent unnecessary re-renders
     const checkServerHealth = useMemo(() => {
@@ -103,6 +148,7 @@ export default function AnalyzePage() {
             const compressedFile = await compressImage(file);
             setSelectedFile(compressedFile);
             setError(null);
+            setSelectedAnalysisId(null); // Clear selected analysis when new image is selected
         } catch (err) {
             setError('Failed to process image. Please try again.');
         }
@@ -114,6 +160,12 @@ export default function AnalyzePage() {
 
     const handleAnalyze = useCallback(async () => {
         if (!selectedFile) return;
+
+        // Check if user is authenticated
+        if (!isAuthenticated) {
+            setError('Please log in to analyze images');
+            return;
+        }
 
         setIsAnalyzing(true);
         setError(null);
@@ -129,6 +181,8 @@ export default function AnalyzePage() {
             formData.append('image', selectedFile);
             formData.append('analysis_type', analysisType);
 
+            const token = localStorage.getItem('token');
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
@@ -138,6 +192,9 @@ export default function AnalyzePage() {
                 signal: controller.signal,
                 mode: 'cors',
                 credentials: 'same-origin',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
             clearTimeout(timeoutId);
@@ -186,18 +243,13 @@ export default function AnalyzePage() {
                 ]
             };
 
-            console.log('Structured Analysis Results:', {
-                technicalAssessment: technicalAssessment,
-                suggestions: suggestions
-            });
-
             setResults(newResults);
 
             // Update recent analyses and save to localStorage
             const updatedAnalyses = [{
                 id: Date.now(),
                 timestamp: new Date().toLocaleString(),
-                image: URL.createObjectURL(selectedFile),
+                image: null, // Don't create blob URL - it becomes invalid
                 type: analysisType,
                 results: newResults
             }, ...recentAnalyses.slice(0, 4)];
@@ -205,21 +257,108 @@ export default function AnalyzePage() {
             setRecentAnalyses(updatedAnalyses);
             localStorage.setItem('recentAnalyses', JSON.stringify(updatedAnalyses));
 
+            // Refresh database analyses to show the new analysis
+            if (isAuthenticated && user?.id) {
+                fetch(`${process.env.NEXT_PUBLIC_DB_SERVICE_URL}/api/analyses/user?limit=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                })
+                    .then(res => {
+                        if (!res.ok) throw new Error('Failed to fetch analyses');
+                        return res.json();
+                    })
+                    .then(data => {
+                        setDbAnalyses(data.analyses || []);
+                    })
+                    .catch(err => {
+                        console.error('Error refreshing database analyses:', err);
+                    });
+            }
+
         } catch (err) {
             console.error('Analysis error:', err);
             setError(err.message || 'Failed to analyze image. Please try again.');
         } finally {
             setIsAnalyzing(false);
         }
-    }, [selectedFile, analysisType, recentAnalyses, checkServerHealth]);
+    }, [selectedFile, analysisType, recentAnalyses, checkServerHealth, isAuthenticated, user?.id]);
 
     const handleReanalyze = useCallback(() => {
         handleAnalyze();
     }, [handleAnalyze]);
 
     const handleViewPreviousAnalysis = useCallback((analysis) => {
-        setResults(analysis.results);
+        // Clear current state but keep track of the analysis
+        setError(null);
+        setSelectedAnalysisId(analysis.id);
+
+        // Create a mock file for the analysis if it has an imageUrl
+        if (analysis.imageUrl) {
+            const mockFile = new File([], analysis.filename || 'artwork.jpg', { type: 'image/jpeg' });
+            setSelectedFile(mockFile);
+        }
+
+        // Handle database analyses (from API)
+        if (analysis.results && analysis.results.technicalQuality) {
+            // Database analysis with results structure
+            const structuredResults = {
+                style: analysis.modelUsed || "AI Analysis Results",
+                technicalAssessment: analysis.results.technicalQuality || "Analysis results",
+                composition: analysis.results.composition || "Composition analysis",
+                colorTheory: analysis.results.colorTheory || "Color theory analysis",
+                styleAndContext: analysis.results.styleContext || "Style and context analysis",
+                improvements: analysis.suggestions || ["Consider exploring different techniques"],
+                learning_resources: analysis.learningResources || [
+                    {
+                        title: "Fundamental Art Techniques",
+                        description: "Learn essential techniques to improve your artistic skills",
+                        type: "Tutorial",
+                        difficulty: "Intermediate"
+                    }
+                ]
+            };
+            setResults(structuredResults);
+        } else if (analysis.analysis) {
+            // Handle database analyses with different structure
+            const structuredResults = {
+                style: analysis.modelUsed || "AI Analysis Results",
+                technicalAssessment: analysis.analysis || "Analysis results",
+                composition: analysis.results?.composition || "Composition analysis",
+                colorTheory: analysis.results?.colorTheory || "Color theory analysis",
+                styleAndContext: analysis.results?.styleContext || "Style and context analysis",
+                improvements: analysis.suggestions || ["Consider exploring different techniques"],
+                learning_resources: analysis.learningResources || [
+                    {
+                        title: "Fundamental Art Techniques",
+                        description: "Learn essential techniques to improve your artistic skills",
+                        type: "Tutorial",
+                        difficulty: "Intermediate"
+                    }
+                ]
+            };
+            setResults(structuredResults);
+        } else {
+            // Handle localStorage analyses
+            setResults(analysis.results);
+        }
     }, []);
+
+    const handleAddToArtworks = useCallback(() => {
+        if (results) {
+            // Navigate to new artwork page with pre-filled data
+            const artworkData = {
+                title: selectedFile ? `Analysis of ${selectedFile.name}` : 'Analysis from Previous Work',
+                description: results.technicalAssessment?.substring(0, 200) + '...' || 'Analysis results',
+                imageFile: selectedFile,
+                fromAnalysis: true
+            };
+
+            // Store the data temporarily and navigate
+            sessionStorage.setItem('artworkFromAnalysis', JSON.stringify(artworkData));
+            router.push('/dashboard/artworks/new?fromAnalysis=true');
+        }
+    }, [selectedFile, results, router]);
 
     if (!mounted) {
         return null; // or a loading spinner
@@ -256,6 +395,7 @@ export default function AnalyzePage() {
                                     analysisType={analysisType}
                                     onAnalysisTypeChange={handleAnalysisTypeChange}
                                     isAnalyzed={!!results}
+                                    preloadedImageUrl={imageUrl}
                                 />
                             </div>
                         </AnimatePresence>
@@ -348,15 +488,28 @@ export default function AnalyzePage() {
                         )}
 
                         <AnimatePresence mode="wait">
-                            {results && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                >
-                                    <AnalysisResults results={results} onReanalyze={handleReanalyze} />
-                                </motion.div>
-                            )}
+                            {(() => {
+                                return results && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                    >
+                                        <AnalysisResults results={results} onReanalyze={handleReanalyze} />
+
+                                        {/* Add to Artworks Button */}
+                                        <div className="mt-6">
+                                            <button
+                                                onClick={handleAddToArtworks}
+                                                className="w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5 text-white"
+                                            >
+                                                <FaPlus />
+                                                <span>Add to My Artworks</span>
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                );
+                            })()}
                         </AnimatePresence>
                     </div>
 
@@ -366,26 +519,85 @@ export default function AnalyzePage() {
                             <h2 className="text-lg font-medium text-text mb-4">
                                 Recent Analyses
                             </h2>
-                            {recentAnalyses.length > 0 ? (
-                                <div className="space-y-4">
-                                    {recentAnalyses.map((analysis) => (
+
+                            {dbAnalysesLoading ? (
+                                <div className="text-sm text-text/60">Loading...</div>
+                            ) : (dbAnalyses.length > 0 || recentAnalyses.length > 0) ? (
+                                <div className="space-y-3">
+                                    {/* Show database analyses first (most recent) */}
+                                    {dbAnalyses.slice(0, 5).map((analysis) => (
                                         <motion.div
                                             key={analysis.id}
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
-                                            className="bg-background-alt rounded-lg p-4 cursor-pointer hover:bg-background-hover transition-colors border border-text/5"
+                                            className={`bg-background-alt rounded-lg p-3 cursor-pointer hover:bg-background-hover transition-all duration-200 border ${selectedAnalysisId === analysis.id
+                                                ? 'border-primary-coral shadow-sm'
+                                                : 'border-text/5 hover:border-primary-coral/30 hover:shadow-sm'
+                                                }`}
                                             onClick={() => handleViewPreviousAnalysis(analysis)}
+                                            title="Click to view analysis"
                                         >
-                                            <div className="flex items-center space-x-4">
-                                                <div className="h-16 w-16 relative rounded-lg overflow-hidden">
-                                                    <img
-                                                        src={analysis.image}
-                                                        alt="Analyzed artwork"
-                                                        className="object-cover w-full h-full"
-                                                    />
+                                            <div className="flex items-center space-x-3">
+                                                <div className="h-12 w-12 relative rounded-lg overflow-hidden bg-primary-coral/10 flex items-center justify-center">
+                                                    {analysis.imageUrl ? (
+                                                        <img
+                                                            src={analysis.imageUrl}
+                                                            alt={analysis.artworkTitle || 'Artwork'}
+                                                            className="object-cover w-full h-full"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                                e.target.nextSibling.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div className="w-full h-full flex items-center justify-center" style={{ display: analysis.imageUrl ? 'none' : 'flex' }}>
+                                                        <FaPalette className="text-primary-coral text-sm" />
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-sm font-medium text-text">
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-text truncate">
+                                                        {analysis.artworkTitle || 'Untitled Artwork'}
+                                                    </p>
+                                                    <p className="text-xs text-text/60">
+                                                        {new Date(analysis.date).toLocaleDateString()} • {analysis.type}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+
+                                    {/* Show localStorage analyses if no database analyses or as additional recent ones */}
+                                    {dbAnalyses.length === 0 && recentAnalyses.slice(0, 5).map((analysis) => (
+                                        <motion.div
+                                            key={analysis.id}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            className={`bg-background-alt rounded-lg p-3 cursor-pointer hover:bg-background-hover transition-all duration-200 border ${selectedAnalysisId === analysis.id
+                                                ? 'border-primary-coral shadow-sm'
+                                                : 'border-text/5 hover:border-primary-coral/30 hover:shadow-sm'
+                                                }`}
+                                            onClick={() => handleViewPreviousAnalysis(analysis)}
+                                            title="Click to view analysis"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <div className="h-12 w-12 relative rounded-lg overflow-hidden bg-primary-coral/10 flex items-center justify-center">
+                                                    {analysis.image ? (
+                                                        <img
+                                                            src={analysis.image}
+                                                            alt="Analyzed artwork"
+                                                            className="object-cover w-full h-full"
+                                                            onError={(e) => {
+                                                                e.target.style.display = 'none';
+                                                                e.target.nextSibling.style.display = 'flex';
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <div className="w-full h-full flex items-center justify-center" style={{ display: analysis.image ? 'none' : 'flex' }}>
+                                                        <FaPalette className="text-primary-coral text-sm" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-medium text-text truncate">
                                                         {analysis.type} Analysis
                                                     </p>
                                                     <p className="text-xs text-text/60">

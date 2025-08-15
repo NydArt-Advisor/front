@@ -19,8 +19,35 @@ const yeseva = Yeseva_One({
 });
 
 export const metadata = {
-    title: 'NydArt Advisor',
+    title: {
+        default: 'NydArt Advisor - AI-Powered Artwork Analysis',
+        template: '%s - NydArt Advisor'
+    },
     description: 'Your personal art advisor powered by AI',
+    icons: {
+        icon: [
+            {
+                url: '/Logo/Logo_icon_dark.svg',
+                media: '(prefers-color-scheme: light)',
+                type: 'image/svg+xml',
+            },
+            {
+                url: '/Logo/Logo_icon_light.svg',
+                media: '(prefers-color-scheme: dark)',
+                type: 'image/svg+xml',
+            },
+        ],
+        shortcut: '/Logo/Logo_icon_dark.svg',
+        apple: '/Logo/Logo_icon_dark.svg',
+        other: [
+            {
+                rel: 'mask-icon',
+                url: '/Logo/Logo_icon_dark.svg',
+                color: '#FF6B35',
+            },
+        ],
+    },
+    manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }) {

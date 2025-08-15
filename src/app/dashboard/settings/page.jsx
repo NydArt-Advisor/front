@@ -1,410 +1,289 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { FaCog, FaShieldAlt, FaBell, FaPalette, FaUser, FaSave, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useState, useEffect } from 'react';
+import { useTheme } from '@/context/ThemeContext';
+import ChangePasswordModal from '@/components/settings/ChangePasswordModal';
+import TwoFactorModal from '@/components/settings/TwoFactorModal';
+import NotificationPreferences from '@/components/notifications/NotificationPreferences';
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { theme, setTheme } = useTheme();
     const [activeTab, setActiveTab] = useState('general');
-    const [showPassword, setShowPassword] = useState(false);
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    const [generalSettings, setGeneralSettings] = useState({
+    const [settings, setSettings] = useState({
+        theme: 'auto',
         language: 'en',
-        timezone: 'UTC',
-        dateFormat: 'MM/DD/YYYY',
-        theme: 'auto'
+        showAnimations: true,
+        compactLayout: false,
+        highContrastMode: false
     });
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveMessage, setSaveMessage] = useState('');
+    const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+    const [showTwoFactorModal, setShowTwoFactorModal] = useState(false);
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    const [isLoading2FA, setIsLoading2FA] = useState(true);
 
-    const [notificationSettings, setNotificationSettings] = useState({
-        emailNotifications: true,
-        pushNotifications: true,
-        analysisComplete: true,
-        usageAlerts: true,
-        featureUpdates: true,
-        marketingEmails: false
-    });
+    // Load settings from localStorage on component mount
+    useEffect(() => {
+        const savedSettings = localStorage.getItem('nydart-settings');
+        if (savedSettings) {
+            try {
+                const parsedSettings = JSON.parse(savedSettings);
+                setSettings(prev => ({
+                    ...prev,
+                    ...parsedSettings
+                }));
+            } catch (error) {
+                console.error('Error parsing saved settings:', error);
+            }
+        }
 
-    const [securitySettings, setSecuritySettings] = useState({
-        twoFactorAuth: false,
-        loginAlerts: true,
-        sessionTimeout: 30
-    });
+        // Fetch 2FA status
+        fetchTwoFactorStatus();
+    }, []);
 
-    const [passwordForm, setPasswordForm] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-    });
+    // Fetch 2FA status from backend
+    const fetchTwoFactorStatus = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setIsLoading2FA(false);
+                return;
+            }
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL}/two-factor/status`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setTwoFactorEnabled(data.twoFactorEnabled || false);
+            }
+        } catch (error) {
+            console.error('Error fetching 2FA status:', error);
+        } finally {
+            setIsLoading2FA(false);
+        }
+    };
+
+    // Update settings when theme changes
+    useEffect(() => {
+        setSettings(prev => ({
+            ...prev,
+            theme: theme || 'auto'
+        }));
+    }, [theme]);
+
+    const handleSettingChange = (setting, value) => {
+        setSettings(prev => ({
+            ...prev,
+            [setting]: value
+        }));
+    };
+
+    const handleSaveSettings = async () => {
+        setIsSaving(true);
+        setSaveMessage('');
+
+        try {
+            // Save settings to localStorage
+            localStorage.setItem('nydart-settings', JSON.stringify(settings));
+
+            // Update theme if changed
+            if (settings.theme !== theme) {
+                setTheme(settings.theme);
+            }
+
+            setSaveMessage('Settings saved successfully!');
+
+            // Clear success message after 3 seconds
+            setTimeout(() => setSaveMessage(''), 3000);
+        } catch (error) {
+            setSaveMessage('Failed to save settings. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const tabs = [
-        { id: 'general', label: 'General', icon: FaCog },
-        { id: 'notifications', label: 'Notifications', icon: FaBell },
-        { id: 'security', label: 'Security', icon: FaShieldAlt },
-        { id: 'appearance', label: 'Appearance', icon: FaPalette }
+        { id: 'general', label: 'General' },
+        { id: 'notifications', label: 'Notifications' },
+        { id: 'security', label: 'Security' },
+        { id: 'appearance', label: 'Appearance' }
     ];
 
-    const handleGeneralSettingChange = (setting, value) => {
-        setGeneralSettings(prev => ({
-            ...prev,
-            [setting]: value
-        }));
-    };
-
-    const handleNotificationSettingChange = (setting, value) => {
-        setNotificationSettings(prev => ({
-            ...prev,
-            [setting]: value
-        }));
-    };
-
-    const handleSecuritySettingChange = (setting, value) => {
-        setSecuritySettings(prev => ({
-            ...prev,
-            [setting]: value
-        }));
-    };
-
-    const handlePasswordChange = (field, value) => {
-        setPasswordForm(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const handleSaveGeneral = async () => {
-        try {
-            // TODO: Implement API call to save general settings
-            console.log('Saving general settings:', generalSettings);
-            // Show success message
-        } catch (error) {
-            console.error('Error saving general settings:', error);
-            // Show error message
-        }
-    };
-
-    const handleSaveNotifications = async () => {
-        try {
-            // TODO: Implement API call to save notification settings
-            console.log('Saving notification settings:', notificationSettings);
-            // Show success message
-        } catch (error) {
-            console.error('Error saving notification settings:', error);
-            // Show error message
-        }
-    };
-
-    const handleSaveSecurity = async () => {
-        try {
-            // TODO: Implement API call to save security settings
-            console.log('Saving security settings:', securitySettings);
-            // Show success message
-        } catch (error) {
-            console.error('Error saving security settings:', error);
-            // Show error message
-        }
-    };
-
-    const handleChangePassword = async () => {
-        try {
-            if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-                throw new Error('New passwords do not match');
-            }
-            // TODO: Implement API call to change password
-            console.log('Changing password');
-            setPasswordForm({
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: ''
-            });
-            // Show success message
-        } catch (error) {
-            console.error('Error changing password:', error);
-            // Show error message
-        }
-    };
-
-    const renderGeneralTab = () => (
+    const renderGeneralSettings = () => (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-text mb-4">General Settings</h3>
+                <h3 className="text-xl font-semibold text-text mb-4">General Settings</h3>
+                <p className="text-text/70 mb-6">Configure your basic account preferences.</p>
+
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-text mb-2">Language</label>
+                        <label className="block text-sm font-medium text-text mb-2">
+                            Language
+                        </label>
                         <select
-                            value={generalSettings.language}
-                            onChange={(e) => handleGeneralSettingChange('language', e.target.value)}
+                            value={settings.language}
+                            onChange={(e) => handleSettingChange('language', e.target.value)}
                             className="w-full px-4 py-3 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
+                            disabled
                         >
                             <option value="en">English</option>
                             <option value="fr">Français</option>
                             <option value="es">Español</option>
                             <option value="de">Deutsch</option>
                         </select>
+                        <p className="text-xs text-text/50 mt-1">Language support coming soon</p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-text mb-2">Timezone</label>
+                        <label className="block text-sm font-medium text-text mb-2">
+                            Theme
+                        </label>
                         <select
-                            value={generalSettings.timezone}
-                            onChange={(e) => handleGeneralSettingChange('timezone', e.target.value)}
+                            value={settings.theme}
+                            onChange={(e) => handleSettingChange('theme', e.target.value)}
                             className="w-full px-4 py-3 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
                         >
-                            <option value="UTC">UTC</option>
-                            <option value="EST">Eastern Time</option>
-                            <option value="PST">Pacific Time</option>
-                            <option value="CET">Central European Time</option>
+                            <option value="auto">Auto (System)</option>
+                            <option value="light">Light Theme</option>
+                            <option value="dark">Dark Theme</option>
                         </select>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text mb-2">Date Format</label>
-                        <select
-                            value={generalSettings.dateFormat}
-                            onChange={(e) => handleGeneralSettingChange('dateFormat', e.target.value)}
-                            className="w-full px-4 py-3 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                        >
-                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text mb-2">Theme</label>
-                        <select
-                            value={generalSettings.theme}
-                            onChange={(e) => handleGeneralSettingChange('theme', e.target.value)}
-                            className="w-full px-4 py-3 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                        >
-                            <option value="auto">Auto</option>
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
-                        </select>
-                    </div>
-                </div>
-                <div className="mt-6">
-                    <button
-                        onClick={handleSaveGeneral}
-                        className="flex items-center space-x-2 px-6 py-3 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors"
-                    >
-                        <FaSave />
-                        <span>Save General Settings</span>
-                    </button>
                 </div>
             </div>
         </div>
     );
 
-    const renderNotificationsTab = () => (
+    const renderNotificationsSettings = () => (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-text mb-4">Notification Preferences</h3>
+                <h3 className="text-xl font-semibold text-text mb-4">Notification Settings</h3>
+                <p className="text-text/70 mb-6">Manage how you receive notifications and updates.</p>
+
+                <NotificationPreferences />
+            </div>
+        </div>
+    );
+
+    const renderSecuritySettings = () => (
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-xl font-semibold text-text mb-4">Security Settings</h3>
+                <p className="text-text/70 mb-6">Manage your account security and privacy.</p>
+
                 <div className="space-y-4">
-                    {Object.entries(notificationSettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-4 bg-background-alt rounded-lg">
-                            <div>
-                                <h4 className="font-medium text-text capitalize">
-                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                                </h4>
-                                <p className="text-sm text-text/60">
-                                    {key === 'emailNotifications' && 'Receive notifications via email'}
-                                    {key === 'pushNotifications' && 'Receive push notifications in browser'}
-                                    {key === 'analysisComplete' && 'Get notified when analysis is complete'}
-                                    {key === 'usageAlerts' && 'Receive warnings about usage limits'}
-                                    {key === 'featureUpdates' && 'Stay informed about new features'}
-                                    {key === 'marketingEmails' && 'Receive promotional emails and offers'}
-                                </p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={value}
-                                    onChange={(e) => handleNotificationSettingChange(key, e.target.checked)}
-                                    className="sr-only peer"
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-coral/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-coral"></div>
-                            </label>
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-6">
-                    <button
-                        onClick={handleSaveNotifications}
-                        className="flex items-center space-x-2 px-6 py-3 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors"
-                    >
-                        <FaSave />
-                        <span>Save Notification Settings</span>
-                    </button>
+                    <div className="p-4 border border-text/10 rounded-lg">
+                        <h4 className="font-medium text-text mb-2">Change Password</h4>
+                        <p className="text-sm text-text/60 mb-3">Update your account password for better security</p>
+                        <button
+                            onClick={() => setShowChangePasswordModal(true)}
+                            className="px-4 py-2 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors"
+                        >
+                            Change Password
+                        </button>
+                    </div>
+
+                    <div className="p-4 border border-text/10 rounded-lg">
+                        <h4 className="font-medium text-text mb-2">Two-Factor Authentication</h4>
+                        <p className="text-sm text-text/60 mb-3">Add an extra layer of security to your account</p>
+                        <button
+                            onClick={() => setShowTwoFactorModal(true)}
+                            disabled={isLoading2FA}
+                            className="px-4 py-2 bg-background border border-text/20 hover:bg-background-alt text-text rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            {isLoading2FA ? 'Loading...' : twoFactorEnabled ? 'Disable 2FA' : 'Enable 2FA'}
+                        </button>
+                        {twoFactorEnabled && (
+                            <p className="text-xs text-green-600 mt-2">✓ Two-factor authentication is enabled</p>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     );
 
-    const renderSecurityTab = () => (
+    const renderAppearanceSettings = () => (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-text mb-4">Security Settings</h3>
-                <div className="space-y-4">
-                    {Object.entries(securitySettings).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-4 bg-background-alt rounded-lg">
-                            <div>
-                                <h4 className="font-medium text-text capitalize">
-                                    {key === 'twoFactorAuth' ? 'Two-Factor Authentication' :
-                                        key === 'loginAlerts' ? 'Login Alerts' :
-                                            key === 'sessionTimeout' ? 'Session Timeout' : key}
-                                </h4>
-                                <p className="text-sm text-text/60">
-                                    {key === 'twoFactorAuth' && 'Add an extra layer of security to your account'}
-                                    {key === 'loginAlerts' && 'Get notified of new login attempts'}
-                                    {key === 'sessionTimeout' && 'Automatically log out after inactivity'}
-                                </p>
-                            </div>
-                            {key === 'sessionTimeout' ? (
-                                <select
-                                    value={value}
-                                    onChange={(e) => handleSecuritySettingChange(key, e.target.value)}
-                                    className="px-4 py-2 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                                >
-                                    <option value={15}>15 minutes</option>
-                                    <option value={30}>30 minutes</option>
-                                    <option value={60}>1 hour</option>
-                                    <option value={120}>2 hours</option>
-                                </select>
-                            ) : (
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={value}
-                                        onChange={(e) => handleSecuritySettingChange(key, e.target.checked)}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-coral/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-coral"></div>
-                                </label>
-                            )}
-                        </div>
-                    ))}
-                </div>
-                <div className="mt-6">
-                    <button
-                        onClick={handleSaveSecurity}
-                        className="flex items-center space-x-2 px-6 py-3 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors"
-                    >
-                        <FaSave />
-                        <span>Save Security Settings</span>
-                    </button>
-                </div>
-            </div>
+                <h3 className="text-xl font-semibold text-text mb-4">Appearance Settings</h3>
+                <p className="text-text/70 mb-6">Customize the look and feel of your NydArt Advisor experience.</p>
 
-            {/* Change Password Section */}
-            <div className="mt-8">
-                <h3 className="text-lg font-semibold text-text mb-4">Change Password</h3>
-                <div className="bg-background-alt rounded-lg p-6 space-y-4">
+                <div className="grid md:grid-cols-2 gap-8">
                     <div>
-                        <label className="block text-sm font-medium text-text mb-2">Current Password</label>
-                        <div className="relative">
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                value={passwordForm.currentPassword}
-                                onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                                className="w-full px-4 py-3 pr-12 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                                placeholder="Enter current password"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text/40 hover:text-text"
-                            >
-                                {showPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text mb-2">New Password</label>
-                        <div className="relative">
-                            <input
-                                type={showNewPassword ? 'text' : 'password'}
-                                value={passwordForm.newPassword}
-                                onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                                className="w-full px-4 py-3 pr-12 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                                placeholder="Enter new password"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowNewPassword(!showNewPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text/40 hover:text-text"
-                            >
-                                {showNewPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text mb-2">Confirm New Password</label>
-                        <div className="relative">
-                            <input
-                                type={showConfirmPassword ? 'text' : 'password'}
-                                value={passwordForm.confirmPassword}
-                                onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                                className="w-full px-4 py-3 pr-12 border border-text/20 rounded-lg bg-background text-text focus:ring-2 focus:ring-primary-coral focus:border-transparent"
-                                placeholder="Confirm new password"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text/40 hover:text-text"
-                            >
-                                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleChangePassword}
-                        className="px-6 py-3 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors"
-                    >
-                        Change Password
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-    const renderAppearanceTab = () => (
-        <div className="space-y-6">
-            <div>
-                <h3 className="text-lg font-semibold text-text mb-4">Appearance Settings</h3>
-                <p className="text-text/60 mb-6">
-                    Customize the look and feel of your NydArt Advisor experience.
-                </p>
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-background-alt rounded-lg p-6">
-                        <h4 className="font-medium text-text mb-4">Theme Options</h4>
+                        <h4 className="font-semibold text-text mb-4">Theme Options</h4>
                         <div className="space-y-3">
-                            <label className="flex items-center space-x-3">
-                                <input type="radio" name="theme" value="light" className="text-primary-coral" />
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="theme"
+                                    value="light"
+                                    checked={settings.theme === 'light'}
+                                    onChange={(e) => handleSettingChange('theme', e.target.value)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">Light Theme</span>
                             </label>
-                            <label className="flex items-center space-x-3">
-                                <input type="radio" name="theme" value="dark" className="text-primary-coral" />
+
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="theme"
+                                    value="dark"
+                                    checked={settings.theme === 'dark'}
+                                    onChange={(e) => handleSettingChange('theme', e.target.value)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">Dark Theme</span>
                             </label>
-                            <label className="flex items-center space-x-3">
-                                <input type="radio" name="theme" value="auto" defaultChecked className="text-primary-coral" />
+
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="theme"
+                                    value="auto"
+                                    checked={settings.theme === 'auto'}
+                                    onChange={(e) => handleSettingChange('theme', e.target.value)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">Auto (System)</span>
                             </label>
                         </div>
                     </div>
-                    <div className="bg-background-alt rounded-lg p-6">
-                        <h4 className="font-medium text-text mb-4">Display Options</h4>
+
+                    <div>
+                        <h4 className="font-semibold text-text mb-4">Display Options</h4>
                         <div className="space-y-3">
-                            <label className="flex items-center space-x-3">
-                                <input type="checkbox" defaultChecked className="text-primary-coral" />
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.showAnimations}
+                                    onChange={(e) => handleSettingChange('showAnimations', e.target.checked)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 rounded focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">Show animations</span>
                             </label>
-                            <label className="flex items-center space-x-3">
-                                <input type="checkbox" defaultChecked className="text-primary-coral" />
+
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.compactLayout}
+                                    onChange={(e) => handleSettingChange('compactLayout', e.target.checked)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 rounded focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">Compact layout</span>
                             </label>
-                            <label className="flex items-center space-x-3">
-                                <input type="checkbox" className="text-primary-coral" />
+
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={settings.highContrastMode}
+                                    onChange={(e) => handleSettingChange('highContrastMode', e.target.checked)}
+                                    className="w-4 h-4 text-primary-coral bg-background border-text/20 rounded focus:ring-primary-coral focus:ring-2"
+                                />
                                 <span className="text-text">High contrast mode</span>
                             </label>
                         </div>
@@ -414,43 +293,100 @@ export default function SettingsPage() {
         </div>
     );
 
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'general':
+                return renderGeneralSettings();
+            case 'notifications':
+                return renderNotificationsSettings();
+            case 'security':
+                return renderSecuritySettings();
+            case 'appearance':
+                return renderAppearanceSettings();
+            default:
+                return renderGeneralSettings();
+        }
+    };
+
+    // Modal components
     return (
         <div className="p-6">
-            {/* Header */}
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-text mb-2">Settings</h1>
                 <p className="text-text/70">Manage your account preferences and security settings</p>
             </div>
 
             <div className="max-w-4xl mx-auto">
-                {/* Tabs */}
-                <div className="flex space-x-1 bg-background-alt rounded-lg p-1 mb-8">
-                    {tabs.map((tab) => {
-                        const IconComponent = tab.icon;
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id
-                                        ? 'bg-primary-coral text-white'
-                                        : 'text-text hover:text-primary-coral'
-                                    }`}
-                            >
-                                <IconComponent className="w-4 h-4" />
-                                <span>{tab.label}</span>
-                            </button>
-                        );
-                    })}
+                <div className="flex space-x-1 mb-8 bg-background-alt rounded-lg p-1">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors ${activeTab === tab.id
+                                ? 'bg-primary-coral text-white'
+                                : 'text-text hover:bg-background'
+                                }`}
+                        >
+                            <span>{tab.label}</span>
+                        </button>
+                    ))}
                 </div>
 
-                {/* Tab Content */}
                 <div className="bg-background-alt rounded-xl p-6">
-                    {activeTab === 'general' && renderGeneralTab()}
-                    {activeTab === 'notifications' && renderNotificationsTab()}
-                    {activeTab === 'security' && renderSecurityTab()}
-                    {activeTab === 'appearance' && renderAppearanceTab()}
+                    {renderContent()}
+
+                    <div className="mt-8 pt-6 border-t border-text/10">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                {saveMessage && (
+                                    <div className={`flex items-center space-x-2 ${saveMessage.includes('successfully')
+                                        ? 'text-green-500'
+                                        : 'text-red-500'
+                                        }`}>
+                                        <span className="text-sm">{saveMessage}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={handleSaveSettings}
+                                disabled={isSaving}
+                                className="flex items-center space-x-2 px-6 py-3 bg-primary-coral hover:bg-primary-salmon text-white rounded-lg transition-colors disabled:opacity-50"
+                            >
+                                {isSaving ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                ) : (
+                                    <span>💾</span>
+                                )}
+                                <span>{isSaving ? 'Saving...' : 'Save Settings'}</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            <ChangePasswordModal
+                isOpen={showChangePasswordModal}
+                onClose={() => setShowChangePasswordModal(false)}
+                onSuccess={() => {
+                    setSaveMessage('Password changed successfully!');
+                    setTimeout(() => setSaveMessage(''), 3000);
+                }}
+            />
+
+            <TwoFactorModal
+                isOpen={showTwoFactorModal}
+                onClose={() => setShowTwoFactorModal(false)}
+                twoFactorEnabled={twoFactorEnabled}
+                onSuccess={() => {
+                    const message = twoFactorEnabled
+                        ? 'Two-factor authentication disabled successfully!'
+                        : 'Two-factor authentication enabled successfully!';
+                    setSaveMessage(message);
+                    setTimeout(() => setSaveMessage(''), 3000);
+                    fetchTwoFactorStatus(); // Refresh status after enabling/disabling
+                }}
+            />
         </div>
     );
 } 

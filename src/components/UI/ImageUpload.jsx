@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import Image from 'next/image';
 
@@ -25,8 +25,18 @@ const analysisTypes = [
     }
 ];
 
-const ImageUpload = ({ onImageSelect, analysisType, onAnalysisTypeChange, isAnalyzed = false }) => {
+const ImageUpload = ({ onImageSelect, analysisType, onAnalysisTypeChange, isAnalyzed = false, preloadedImageUrl = null }) => {
     const [preview, setPreview] = useState(null);
+
+    // Handle pre-loaded image from URL params
+    useEffect(() => {
+        if (preloadedImageUrl && !isAnalyzed) {
+            setPreview(preloadedImageUrl);
+            // Create a mock file object for the pre-loaded image
+            const mockFile = new File([], 'artwork.jpg', { type: 'image/jpeg' });
+            onImageSelect(mockFile);
+        }
+    }, [preloadedImageUrl, isAnalyzed, onImageSelect]);
 
     const onDrop = useCallback((acceptedFiles) => {
         if (isAnalyzed) return; // Prevent new uploads if already analyzed

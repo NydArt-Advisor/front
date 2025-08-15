@@ -9,7 +9,7 @@ const testConnections = async () => {
         // Test Auth Service
         console.log('Testing Auth Service connection...');
         try {
-            const authResponse = await fetch('http://localhost:5002/auth/health');
+            const authResponse = await fetch(`${process.env.NEXT_PUBLIC_AUTH_SERVICE_URL}/auth/health`);
             if (!authResponse.ok) {
                 throw new Error(`Auth service responded with status: ${authResponse.status}`);
             }

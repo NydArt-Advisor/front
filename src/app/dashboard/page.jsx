@@ -13,12 +13,13 @@ import {
     FaBell,
     FaStar,
     FaRocket,
-    FaCrown
+    FaCrown,
+    FaImages
 } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const {
         subscription,
         loading,
@@ -30,30 +31,38 @@ export default function DashboardPage() {
         getPlanDetails
     } = useSubscription();
 
-    // Mock data for demonstration (will be replaced with real API calls)
-    const recentAnalyses = [
-        {
-            id: 1,
-            title: 'Mona Lisa Analysis',
-            date: '2024-01-15',
-            status: 'completed',
-            accuracy: '95%'
-        },
-        {
-            id: 2,
-            title: 'Starry Night Analysis',
-            date: '2024-01-14',
-            status: 'completed',
-            accuracy: '92%'
-        },
-        {
-            id: 3,
-            title: 'The Scream Analysis',
-            date: '2024-01-13',
-            status: 'processing',
-            accuracy: '--'
+    // Real data from database
+    const [recentAnalyses, setRecentAnalyses] = useState([]);
+    const [analysesLoading, setAnalysesLoading] = useState(false);
+    const [analysesError, setAnalysesError] = useState(null);
+
+    // Fetch recent analyses from database
+    useEffect(() => {
+        if (isAuthenticated && user?.id) {
+            const fetchRecentAnalyses = async () => {
+                try {
+                    setAnalysesLoading(true);
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_DB_SERVICE_URL}/api/analyses/user?limit=5`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch analyses');
+                    }
+
+                    const data = await response.json();
+                    setRecentAnalyses(data.analyses || []);
+                } catch (err) {
+                    setAnalysesError(err.message);
+                } finally {
+                    setAnalysesLoading(false);
+                }
+            };
+            fetchRecentAnalyses();
         }
-    ];
+    }, [isAuthenticated, user?.id]);
 
     const getPlanIcon = (planId) => {
         switch (planId) {
@@ -95,7 +104,7 @@ export default function DashboardPage() {
 
     useEffect(() => {
         setMetricsLoading(true);
-        fetch('http://localhost:5005/metrics')
+        fetch(`${process.env.NEXT_PUBLIC_METRICS_SERVICE_URL}/metrics`)
             .then(res => {
                 if (!res.ok) throw new Error('Failed to fetch metrics');
                 return res.text();
@@ -187,6 +196,20 @@ export default function DashboardPage() {
                 />
 
                 <QuickActionCard
+                    href="/dashboard/artworks/new"
+                    title="Add Artwork"
+                    description="Add a new artwork to your collection"
+                    icon={FaImages}
+                />
+
+                <QuickActionCard
+                    href="/dashboard/artworks"
+                    title="My Artworks"
+                    description="View and manage your artwork collection"
+                    icon={FaImages}
+                />
+
+                <QuickActionCard
                     href="/dashboard/subscription"
                     title="Manage Subscription"
                     description="Upgrade or modify your plan"
@@ -199,6 +222,7 @@ export default function DashboardPage() {
                     description="See your analysis history"
                     icon={FaChartLine}
                 />
+
             </div>
 
             {/* Recent Analyses */}
@@ -214,33 +238,54 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-4">
-                    {recentAnalyses.map((analysis) => (
+                    {analysesLoading && <div>Loading analyses...</div>}
+                    {analysesError && <div className="text-red-600">Error: {analysesError}</div>}
+                    {!analysesLoading && !analysesError && recentAnalyses.map((analysis) => (
                         <div
                             key={analysis.id}
                             className="flex items-center justify-between p-4 bg-background rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-text/5 hover:border-text/10"
                         >
                             <div className="flex items-center space-x-4">
-                                <div className="w-12 h-12 bg-primary-coral/10 rounded-xl flex items-center justify-center shadow-sm">
-                                    <FaPalette className="text-primary-coral text-lg" />
-                                </div>
+                                {analysis.imageUrl ? (
+                                    <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm">
+                                        <img
+                                            src={analysis.imageUrl}
+                                            alt={analysis.artworkTitle || 'Artwork'}
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                e.target.nextSibling.style.display = 'flex';
+                                            }}
+                                        />
+                                        <div className="w-full h-full bg-primary-coral/10 rounded-xl flex items-center justify-center" style={{ display: 'none' }}>
+                                            <FaPalette className="text-primary-coral text-lg" />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="w-12 h-12 bg-primary-coral/10 rounded-xl flex items-center justify-center shadow-sm">
+                                        <FaPalette className="text-primary-coral text-lg" />
+                                    </div>
+                                )}
                                 <div>
-                                    <h3 className="font-medium text-text">{analysis.title}</h3>
-                                    <p className="text-sm text-text/60">{analysis.date}</p>
+                                    <h3 className="font-medium text-text">{analysis.artworkTitle || 'Untitled Artwork'}</h3>
+                                    <p className="text-sm text-text/60">
+                                        {new Date(analysis.date).toLocaleDateString()} • {analysis.type} Analysis
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-center space-x-4">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm ${analysis.status === 'completed'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                    {analysis.status}
-                                </span>
-                                <span className="text-sm text-text/60 font-medium">
-                                    {analysis.accuracy}
+                                <span className="px-3 py-1 rounded-full text-xs font-medium shadow-sm bg-green-100 text-green-800">
+                                    Completed
                                 </span>
                             </div>
                         </div>
                     ))}
+                    {!analysesLoading && !analysesError && recentAnalyses.length === 0 && (
+                        <div className="text-center py-8">
+                            <FaPalette className="text-primary-coral/50 text-4xl mx-auto mb-4" />
+                            <p className="text-text/60">No analyses yet. Start by analyzing your first artwork!</p>
+                        </div>
+                    )}
                 </div>
             </div>
 

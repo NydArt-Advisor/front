@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import NotificationBell from '@/components/notifications/NotificationBell';
 import {
     FaHome,
     FaUser,
@@ -15,7 +16,8 @@ import {
     FaPalette,
     FaBars,
     FaTimes,
-    FaSignOutAlt
+    FaSignOutAlt,
+    FaImages
 } from 'react-icons/fa';
 
 const SidebarItem = ({ href, icon: Icon, label, isActive, onClick }) => (
@@ -56,6 +58,21 @@ export default function DashboardLayout({ children }) {
             label: 'Dashboard'
         },
         {
+            href: '/dashboard/analyses',
+            icon: FaPalette,
+            label: 'My Analyses'
+        },
+        {
+            href: '/dashboard/artworks',
+            icon: FaImages,
+            label: 'My Artworks'
+        },
+        {
+            href: '/dashboard/notifications',
+            icon: FaBell,
+            label: 'Notifications'
+        },
+        {
             href: '/dashboard/profile',
             icon: FaUser,
             label: 'Profile'
@@ -66,24 +83,14 @@ export default function DashboardLayout({ children }) {
             label: 'Subscription'
         },
         {
-            href: '/dashboard/usage',
-            icon: FaChartBar,
-            label: 'Usage & Stats'
-        },
-        {
-            href: '/dashboard/analyses',
-            icon: FaPalette,
-            label: 'My Analyses'
-        },
-        {
-            href: '/dashboard/notifications',
-            icon: FaBell,
-            label: 'Notifications'
-        },
-        {
             href: '/dashboard/billing',
             icon: FaHistory,
             label: 'Billing History'
+        },
+        {
+            href: '/dashboard/usage',
+            icon: FaChartBar,
+            label: 'Usage & Stats'
         },
         {
             href: '/dashboard/settings',
@@ -190,7 +197,7 @@ export default function DashboardLayout({ children }) {
                             <FaBars className="text-xl" />
                         </button>
                         <h1 className="text-lg font-semibold text-text">Dashboard</h1>
-                        <div className="w-10" /> {/* Spacer for centering */}
+                        <NotificationBell />
                     </div>
                 </div>
 

@@ -65,7 +65,6 @@ const Header = () => {
     const navigationItems = [
         { label: 'Home', href: '/' },
         { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Artworks', href: '/artworks' },
         { label: 'AI Advisor', href: '/analyze' },
         { label: 'About', href: '/about' },
     ];
