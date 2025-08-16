@@ -1,0 +1,17 @@
+{
+    "name": "NydArt Advisor",
+    "short_name": "NydArt",
+    "description": "Your personal art advisor powered by AI",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#FF6B35",
+    "icons": [
+        {
+            "src": "/Logo/Logo_icon_dark.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}
