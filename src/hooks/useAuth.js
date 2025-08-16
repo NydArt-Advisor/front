@@ -34,7 +34,8 @@ export const AuthProvider = ({ children }) => {
                                        error.message.includes('Token expired') ||
                                        error.message.includes('Invalid token') ||
                                        error.message.includes('Unauthorized') ||
-                                       error.message.includes('Forbidden');
+                                       error.message.includes('Forbidden') ||
+                                       error.message.includes('Failed to get current user');
                 
                 if (shouldClearToken) {
                     localStorage.removeItem('token');
@@ -51,7 +52,7 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         try {
-            console.log('OK');
+            console.log('Checking authentication...');
             setError(null);
             const userData = await AuthService.getCurrentUser();
             setUser(userData);
@@ -59,13 +60,21 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Auth check failed:', error);
             
+            // Handle network errors gracefully
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                console.warn('Network error during auth check - this is normal if backend services are not running');
+                setUser(null);
+                return null;
+            }
+            
             // Only clear user state for authentication-specific errors
             const isAuthError = error.message.includes('Session expired') || 
                               error.message.includes('Token expired') ||
                               error.message.includes('Invalid token') ||
                               error.message.includes('Unauthorized') ||
                               error.message.includes('Forbidden') ||
-                              error.message.includes('No authentication token found');
+                              error.message.includes('No authentication token found') ||
+                              error.message.includes('Failed to get current user');
             
             if (isAuthError) {
                 setUser(null);

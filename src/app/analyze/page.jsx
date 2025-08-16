@@ -8,9 +8,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FaPalette, FaPlus } from 'react-icons/fa';
 
 // Dynamically import components with ssr: false to prevent hydration mismatch
-const ImageUpload = dynamic(() => import('@/components/ui/ImageUpload'), { ssr: false });
-const AnalysisResults = dynamic(() => import('@/components/ui/AnalysisResults'), { ssr: false });
-const AnalysisSkeleton = dynamic(() => import('@/components/ui/AnalysisSkeleton'), { ssr: false });
+const ImageUpload = dynamic(() => import('@/components/UI/ImageUpload'), { ssr: false });
+const AnalysisResults = dynamic(() => import('@/components/UI/AnalysisResults'), { ssr: false });
+const AnalysisSkeleton = dynamic(() => import('@/components/UI/AnalysisSkeleton'), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
 

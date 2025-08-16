@@ -1,4 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+// Validate and set the API URL with proper fallback
+const AI_SERVICE_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
+if (!AI_SERVICE_URL) {
+    console.error('❌ NEXT_PUBLIC_AI_SERVICE_URL environment variable is not set!');
+    console.error('💡 Please set NEXT_PUBLIC_AI_SERVICE_URL in your .env.local file');
+    console.error('   Example: NEXT_PUBLIC_AI_SERVICE_URL=http://localhost:5000');
+}
+
+const API_URL = AI_SERVICE_URL || 'http://localhost:5000';
 
 export const analyzeArtwork = async (file) => {
   try {

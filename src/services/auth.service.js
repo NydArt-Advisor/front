@@ -1,4 +1,12 @@
-const API_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL + '/auth';
+// Validate and set the API URL with proper fallback
+const AUTH_SERVICE_URL = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL;
+if (!AUTH_SERVICE_URL) {
+    console.error('❌ NEXT_PUBLIC_AUTH_SERVICE_URL environment variable is not set!');
+    console.error('💡 Please set NEXT_PUBLIC_AUTH_SERVICE_URL in your .env.local file');
+    console.error('   Example: NEXT_PUBLIC_AUTH_SERVICE_URL=http://localhost:5002');
+}
+
+const API_URL = AUTH_SERVICE_URL ? `${AUTH_SERVICE_URL}/auth` : 'http://localhost:5002/auth';
 
 class AuthService {
     static async getCurrentUser() {

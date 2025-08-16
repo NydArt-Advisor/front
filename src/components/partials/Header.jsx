@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { FaBars, FaTimes, FaBell } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
-import ThemeButton from '@/components/ui/ThemeButton';
+import ThemeButton from '@/components/UI/ThemeButton';
 
 const UserAvatar = ({ username }) => {
     const initial = username ? username[0].toUpperCase() : 'U';

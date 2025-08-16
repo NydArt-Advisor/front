@@ -7,9 +7,9 @@ import Image from 'next/image';
 import { FcGoogle } from 'react-icons/fc';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
-import ThemeButton from '@/components/ui/ThemeButton';
+import Input from '@/components/UI/Input';
+import Button from '@/components/UI/Button';
+import ThemeButton from '@/components/UI/ThemeButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 
