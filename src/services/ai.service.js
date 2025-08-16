@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:3002/api/ai';
+const API_URL = process.env.NEXT_PUBLIC_AI_SERVICE_URL;
 
 export const analyzeArtwork = async (file) => {
   try {
