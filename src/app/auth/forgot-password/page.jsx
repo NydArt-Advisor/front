@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import ThemeButton from "@/components/ui/ThemeButton";
+import ThemeButton from "@/components/UI/ThemeButton";
 import { useTheme } from "@/context/ThemeContext";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import AuthLayout from '@/components/layout/AuthLayout';

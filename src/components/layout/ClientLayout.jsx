@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import MainLayout from './MainLayout';
-import DynamicFavicon from '@/components/ui/DynamicFavicon';
+import DynamicFavicon from '@/components/UI/DynamicFavicon';
 
 const ClientLayout = ({ children }) => {
     const pathname = usePathname();

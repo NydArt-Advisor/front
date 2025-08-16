@@ -1,9 +1,9 @@
 import { useState } from "react";
-import Input from "@/components/ui/Input";
-import Button from "@/components/ui/Button";
+import Input from "@/components/UI/Input";
+import Button from "@/components/UI/Button";
 import Link from "next/link";
 import { useTheme } from "@/context/ThemeContext";
-import ThemeButton from '@/components/ui/ThemeButton';
+import ThemeButton from '@/components/UI/ThemeButton';
 import Image from "next/image";
 import AuthService from "@/services/auth.service";
 

@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FcGoogle } from 'react-icons/fc';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
-import ThemeButton from '@/components/ui/ThemeButton';
+import Input from '@/components/UI/Input';
+import Button from '@/components/UI/Button';
+import ThemeButton from '@/components/UI/ThemeButton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
 
