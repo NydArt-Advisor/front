@@ -93,7 +93,7 @@ const RegisterForm = () => {
 
     const handleGoogleSignIn = () => {
         // Redirect to Google OAuth endpoint
-        const authServiceUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL || 'http://localhost:5002';
+        const authServiceUrl = process.env.NEXT_PUBLIC_AUTH_SERVICE_URL;
         window.location.href = `${authServiceUrl}/auth/google`;
     };
 
