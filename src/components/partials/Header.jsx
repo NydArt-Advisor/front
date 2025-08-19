@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FaBars, FaTimes, FaBell } from 'react-icons/fa';
+import { FaBars, FaTimes, FaBell, FaUniversalAccess } from 'react-icons/fa';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/context/ThemeContext';
+import { useAccessibility } from '../../context/AccessibilityContext';
 import ThemeButton from '@/components/UI/ThemeButton';
+import AccessibilitySettings from '../accessibility/AccessibilitySettings';
 
 const UserAvatar = ({ username }) => {
     const initial = username ? username[0].toUpperCase() : 'U';
@@ -23,9 +25,11 @@ const Header = () => {
     const router = useRouter();
     const { user, logout, isAuthenticated } = useAuth();
     const { isDarkMode } = useTheme();
+    const { highContrastMode, fontSize, reducedMotion } = useAccessibility();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
+    const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // Add refs for the dropdown containers
@@ -108,12 +112,18 @@ const Header = () => {
                     </Link>
 
                     {/* Desktop Navigation */}
-                    <nav className="hidden md:flex space-x-8">
+                    <nav
+                        id="main-navigation"
+                        className="hidden md:flex space-x-8"
+                        role="navigation"
+                        aria-label="Main navigation"
+                    >
                         {navigationItems.map((item) => (
                             <Link
                                 key={item.href}
                                 href={item.href}
                                 className="text-text hover:text-primary-coral px-3 py-2 text-sm font-medium font-primary"
+                                aria-label={`Navigate to ${item.label}`}
                             >
                                 {item.label}
                             </Link>
@@ -122,6 +132,17 @@ const Header = () => {
 
                     {/* User Menu & Theme Toggle - Desktop */}
                     <div className="hidden md:flex items-center space-x-4">
+                        {/* Accessibility Button */}
+                        <button
+                            onClick={() => setIsAccessibilityOpen(true)}
+                            className="flex items-center space-x-2 text-text hover:text-primary-coral focus:outline-none p-2 rounded-lg transition-colors"
+                            aria-label="Open accessibility settings"
+                            title="Accessibility Settings"
+                        >
+                            <FaUniversalAccess className="h-5 w-5" />
+                            <span className="sr-only">Accessibility</span>
+                        </button>
+
                         <ThemeButton />
 
                         {isAuthenticated ? (
@@ -338,6 +359,12 @@ const Header = () => {
                     </div>
                 )}
             </div>
+
+            {/* Accessibility Settings Modal */}
+            <AccessibilitySettings
+                isOpen={isAccessibilityOpen}
+                onClose={() => setIsAccessibilityOpen(false)}
+            />
         </header>
     );
 };
