@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Input from "@/components/ui/Input";
-import Button from "@/components/ui/Button";
+import Input from "@/components/UI/Input";
+import Button from "@/components/UI/Button";
 import Link from "next/link";
 import AuthService from "@/services/auth.service";
 

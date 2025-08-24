@@ -1,8 +1,11 @@
 import { Fredoka, Yeseva_One } from 'next/font/google';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ThemeProvider } from '@/context/ThemeContext';
-import ClientLayout from '@/components/layout/ClientLayout';
+import { AccessibilityProvider } from '../context/AccessibilityContext';
+import ClientLayout from '../components/layout/ClientLayout';
+import SkipNavigation from '../components/accessibility/SkipNavigation';
 import './globals.css';
+import '../styles/accessibility.css';
 
 const fredoka = Fredoka({
     weight: ['400', '500', '600', '700'],
@@ -54,13 +57,16 @@ export default function RootLayout({ children }) {
     return (
         <html lang="en" suppressHydrationWarning>
             <body className={`${fredoka.variable} ${yeseva.variable}`}>
-                <ThemeProvider>
-                    <AuthProvider>
-                        <ClientLayout>
-                            {children}
-                        </ClientLayout>
-                    </AuthProvider>
-                </ThemeProvider>
+                <AccessibilityProvider>
+                    <ThemeProvider>
+                        <AuthProvider>
+                            <SkipNavigation />
+                            <ClientLayout>
+                                {children}
+                            </ClientLayout>
+                        </AuthProvider>
+                    </ThemeProvider>
+                </AccessibilityProvider>
             </body>
         </html>
     );
