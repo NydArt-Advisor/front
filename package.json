@@ -11,7 +11,17 @@
     "test:simple": "node scripts/simple-test.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --watchAll=false"
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "lint:fix": "next lint --fix",
+    "type-check": "tsc --noEmit",
+    "security:audit": "npm audit",
+    "security:fix": "npm audit fix",
+    "docker:build": "docker build -t nydart-advisor/frontend .",
+    "docker:run": "docker run -p 3000:3000 nydart-advisor/frontend",
+    "docker:push": "docker push nydart-advisor/frontend",
+    "ci:test": "npm run lint && npm run type-check && npm run security:audit && npm run test:ci",
+    "ci:build": "npm run ci:test && npm run build && npm run docker:build",
+    "ci:deploy": "npm run ci:build && npm run docker:push"
   },
   "dependencies": {
     "clsx": "^2.1.1",
